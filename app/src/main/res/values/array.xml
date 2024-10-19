@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="scope">
+        <item>com.xingin.xhs</item>
+        <item>com.dianping.v1</item>
+    </string-array>
+</resources>
