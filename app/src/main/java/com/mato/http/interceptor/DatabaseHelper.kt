@@ -1,6 +1,7 @@
 package com.mato.http.interceptor
 
 import android.content.Context
+import android.database.DatabaseUtils
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import de.robv.android.xposed.XposedBridge
@@ -37,6 +38,7 @@ class DatabaseHelper private constructor(
         val fileSize: Long,
         val pageSize: Long,
         val version: Int,
+        val entries: Long
     )
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -63,18 +65,26 @@ class DatabaseHelper private constructor(
 
     fun deleteAll() {
         val db = this.writableDatabase
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
+        db.beginTransaction()
+        try {
+            db.delete(TABLE_NAME, null, null)
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
     }
 
     fun info(): DatabaseInfo {
         val db = this.readableDatabase
         val dbFile = File(db.path)
         val fileSize = if (dbFile.exists()) dbFile.length() else 0
+        val entries = DatabaseUtils.queryNumEntries(db, TABLE_NAME)
         return DatabaseInfo(
             filePath = db.path,
             fileSize = fileSize,
             pageSize = db.pageSize,
             version = db.version,
+            entries = entries
         )
     }
 
