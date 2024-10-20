@@ -1,5 +1,8 @@
 package com.mato.http.interceptor.hooks
 
+import android.content.Context
+import com.mato.http.interceptor.DatabaseHelper
+import com.mato.http.interceptor.HttpRequestEntity
 import com.mato.http.interceptor.beforeMethodHooker
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
@@ -7,22 +10,24 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
+import java.net.URL
 
 /**
  * @Author: sunlulu.tomato
  * @date: 2024/10/18
  */
 class ClientBuilderHook(
+    context: Context,
     lpparam: XC_LoadPackage.LoadPackageParam
-) : MyXposedHook(lpparam), InvocationHandler {
+) : MyXposedHook(context, lpparam), InvocationHandler {
 
     private val _builderClass by lazy {
         runCatching { classLoader.loadClass("okhttp3.OkHttpClient\$Builder") }
             .onFailure(XposedBridge::log)
             .getOrNull()
     }
-
     private val builderClass get() = requireNotNull(_builderClass)
+    private val databaseHelper get() = DatabaseHelper.get(context)
 
     override fun onHandled() {
         XposedHelpers.findAndHookMethod(
@@ -65,8 +70,15 @@ class ClientBuilderHook(
         if (body != null && body::class.java.name.startsWith("okhttp3.")) {
             val contentType = XposedHelpers.callMethod(body, "contentType")
             if (contentType?.toString()?.contains("application/json") == true) {
-                return runCatching { makeNewResponse(contentType, response, body) }
+                val bodyString = XposedHelpers.callMethod(body, "string")
+                    ?: return response
+                return runCatching { makeNewResponse(contentType, response, body, bodyString) }
                     .onFailure(XposedBridge::log)
+                    .onSuccess {
+                        // record to database
+                        val entity = constructHttpRequestEntity(request, response, body, bodyString)
+                        databaseHelper.insert(entity)
+                    }
                     .getOrDefault(response)
             }
         }
@@ -76,10 +88,9 @@ class ClientBuilderHook(
     private fun makeNewResponse(
         contentType: Any,
         response: Any,
-        body: Any
+        body: Any,
+        bodyString: Any
     ): Any {
-        val bodyString = XposedHelpers.callMethod(body, "string")
-            ?: return response
         val newBody = XposedHelpers.callMethod(
             body,
             "create",
@@ -96,5 +107,26 @@ class ClientBuilderHook(
             newBody
         )
         return XposedHelpers.callMethod(newResponseBuilder, "build")
+    }
+
+    private fun constructHttpRequestEntity(
+        request: Any,
+        response: Any,
+        body: Any,
+        bodyString: Any
+    ): HttpRequestEntity {
+        val httpUrl = XposedHelpers.callMethod(request, "url")
+        val url = XposedHelpers.callMethod(httpUrl, "url") as URL
+        val urlString = url.toString()
+        val method = XposedHelpers.callMethod(request, "method") as String
+        val code = XposedHelpers.callMethod(response, "code") as Int
+        val ts = System.currentTimeMillis()
+        return HttpRequestEntity(
+            url = urlString,
+            code = code,
+            method = method,
+            response = bodyString as String,
+            ts = ts
+        )
     }
 }

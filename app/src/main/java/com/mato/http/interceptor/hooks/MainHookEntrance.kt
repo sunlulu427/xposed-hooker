@@ -36,14 +36,14 @@ class MainHookEntrance : IXposedHookLoadPackage {
                     XposedBridge.log("@App: $application")
                     XposedBridge.log("@Plugin version: ${BuildConfig.VERSION_NAME}")
                     XposedBridge.log("@OS version: ${Build.VERSION.SDK_INT}")
+
+                    arrayOf(
+                        ClientBuilderHook(application, lpparam),
+                    ).forEach {
+                        it.handleLoadPackage()
+                    }
                 }
             }
         )
-
-        arrayOf(
-            ClientBuilderHook(lpparam),
-        ).forEach {
-            it.handleLoadPackage()
-        }
     }
 }
