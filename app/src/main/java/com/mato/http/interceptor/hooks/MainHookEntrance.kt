@@ -1,8 +1,10 @@
 package com.mato.http.interceptor.hooks
 
 import android.app.Application
+import android.content.Context
 import android.os.Build
 import com.mato.http.interceptor.BuildConfig
+import com.mato.http.interceptor.InstructionReceiver
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
@@ -27,21 +29,48 @@ class MainHookEntrance : IXposedHookLoadPackage {
         if (lpparam?.packageName != "com.xingin.xhs") {
             return
         }
-        XposedHelpers.findAndHookConstructor(
+        val instructionReceiver = InstructionReceiver()
+        XposedHelpers.findAndHookMethod(
             Application::class.java,
+            Application::onCreate.name,
             object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam?) {
                     super.afterHookedMethod(param)
-                    val application = param?.thisObject as Application
-                    XposedBridge.log("@App: $application")
+                    val context = param?.thisObject as? Context ?: return
+                    XposedBridge.log("@App: $context")
                     XposedBridge.log("@Plugin version: ${BuildConfig.VERSION_NAME}")
                     XposedBridge.log("@OS version: ${Build.VERSION.SDK_INT}")
 
+                    instructionReceiver.register(context)
                     arrayOf(
-                        ClientBuilderHook(application, lpparam),
+                        ClientBuilderHook(context, lpparam),
                     ).forEach {
                         it.handleLoadPackage()
                     }
+                }
+            }
+        )
+
+        XposedHelpers.findAndHookMethod(
+            Application::class.java,
+            Application::onTerminate.name,
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+                    super.beforeHookedMethod(param)
+                    val context = param?.thisObject as? Context ?: return
+                    context.unregisterReceiver(instructionReceiver)
+                }
+            }
+        )
+
+        XposedHelpers.findAndHookMethod(
+            Application::class.java,
+            Application::onLowMemory.name,
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam?) {
+                    super.beforeHookedMethod(param)
+                    val application = param?.thisObject as? Application ?: return
+                    XposedBridge.log("$application onLowMemory")
                 }
             }
         )

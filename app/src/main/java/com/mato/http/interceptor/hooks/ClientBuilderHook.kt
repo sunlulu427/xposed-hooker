@@ -3,6 +3,7 @@ package com.mato.http.interceptor.hooks
 import android.content.Context
 import com.mato.http.interceptor.DatabaseHelper
 import com.mato.http.interceptor.HttpRequestEntity
+import com.mato.http.interceptor.InstructionReceiver
 import com.mato.http.interceptor.beforeMethodHooker
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
@@ -65,6 +66,11 @@ class ClientBuilderHook(
     private fun onInterceptorIntercept(chain: Any): Any? {
         val request = XposedHelpers.callMethod(chain, "request")
         val response = XposedHelpers.callMethod(chain, "proceed", request)
+
+        // only hook started, continue ...
+        if (!InstructionReceiver.hookStarted) {
+            return response
+        }
         val body = XposedHelpers.callMethod(response, "body")
 
         if (body != null && body::class.java.name.startsWith("okhttp3.")) {

@@ -3,6 +3,8 @@ package com.mato.http.interceptor
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import de.robv.android.xposed.XposedBridge
+import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -15,7 +17,7 @@ class DatabaseHelper private constructor(
     companion object {
         private const val DB_NAME = "net_request.db"
         private const val TABLE_NAME = "requests"
-        private const val DB_VERSION = 1
+        private const val DB_VERSION = 2
 
         private val databaseManager = ConcurrentHashMap<Context, DatabaseHelper>()
 
@@ -30,17 +32,25 @@ class DatabaseHelper private constructor(
         }
     }
 
+    data class DatabaseInfo(
+        val filePath: String,
+        val fileSize: Long,
+        val pageSize: Long,
+        val version: Int,
+    )
+
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
             """
                 CREATE TABLE $TABLE_NAME (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    url TEXT,
-                    code INTEGER,
-                    method TEXT,
-                    response TEXT,
+                    date TEXT,
                     ts INTEGER,
-                    length INTEGER
+                    method TEXT,
+                    code INTEGER,
+                    length INTEGER,
+                    url TEXT,
+                    response TEXT
                 )
             """.trimIndent()
         )
@@ -51,9 +61,29 @@ class DatabaseHelper private constructor(
         onCreate(db)
     }
 
+    fun deleteAll() {
+        val db = this.writableDatabase
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
+    }
+
+    fun info(): DatabaseInfo {
+        val db = this.readableDatabase
+        val dbFile = File(db.path)
+        val fileSize = if (dbFile.exists()) dbFile.length() else 0
+        return DatabaseInfo(
+            filePath = db.path,
+            fileSize = fileSize,
+            pageSize = db.pageSize,
+            version = db.version,
+        )
+    }
+
     fun insert(entity: HttpRequestEntity) {
         val db = this.writableDatabase
         val contentValues = entity.toContentValues()
-        db.insert(TABLE_NAME, null, contentValues)
+        val rowId = db.insert(TABLE_NAME, null, contentValues)
+        if (rowId < 0) {
+            XposedBridge.log("Insert row failed: $entity")
+        }
     }
 }
