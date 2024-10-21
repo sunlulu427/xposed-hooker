@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.os.Build
 import com.mato.http.interceptor.BuildConfig
+import com.mato.http.interceptor.DatabaseHelper
 import com.mato.http.interceptor.InstructionReceiver
 import com.mato.http.interceptor.isCurrentProcessMainProcess
 import de.robv.android.xposed.IXposedHookLoadPackage
@@ -68,6 +69,8 @@ class MainHookEntrance : IXposedHookLoadPackage {
                         return
                     }
                     context.unregisterReceiver(instructionReceiver)
+                    val helper = DatabaseHelper.get(context)
+                    helper.clearCache()
                 }
             }
         )
