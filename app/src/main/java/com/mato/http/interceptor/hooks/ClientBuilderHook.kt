@@ -5,7 +5,6 @@ import com.mato.http.interceptor.DatabaseHelper
 import com.mato.http.interceptor.HttpRequestEntity
 import com.mato.http.interceptor.InstructionReceiver
 import com.mato.http.interceptor.beforeMethodHooker
-import com.mato.http.interceptor.onSuccessWhen
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
@@ -89,11 +88,15 @@ class ClientBuilderHook(
                 ?: return response
             return runCatching { makeNewResponse(contentType, response, body, bodyString) }
                 .onFailure(XposedBridge::log)
-                .onSuccessWhen(InstructionReceiver.hookStarted) {
+                .onSuccess {
                     // record to database
                     // only hook started, continue ...
                     val entity = buildEntity(request, response, contentType, bodyString)
-                    databaseHelper.insert(entity)
+                    if (InstructionReceiver.hookStarted) {
+                        databaseHelper.insert(entity)
+                    } else {
+                        databaseHelper.addToCache(entity)
+                    }
                 }
                 .getOrDefault(response)
         }

@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import de.robv.android.xposed.XposedBridge
 import java.io.File
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -15,31 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
 class DatabaseHelper private constructor(
     context: Context
 ) : SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
-    companion object {
-        private const val DB_NAME = "net_request.db"
-        private const val TABLE_NAME = "requests"
-        private const val DB_VERSION = 3
-
-        private val databaseManager = ConcurrentHashMap<Context, DatabaseHelper>()
-
-        fun get(context: Context): DatabaseHelper {
-            val helper = databaseManager[context]
-                ?: synchronized(this) {
-                    val newInstance = DatabaseHelper(context)
-                    databaseManager[context] = newInstance
-                    return newInstance
-                }
-            return helper
-        }
-    }
-
-    data class DatabaseInfo(
-        val filePath: String,
-        val fileSize: Long,
-        val pageSize: Long,
-        val version: Int,
-        val entries: Long
-    )
+    private val cache = Collections.synchronizedList(mutableListOf<HttpRequestEntity>())
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -85,19 +62,76 @@ class DatabaseHelper private constructor(
             fileSize = fileSize,
             pageSize = db.pageSize,
             version = db.version,
-            entries = entries
+            entries = entries,
+            cache = cache.size
         )
     }
 
-    fun insert(entity: HttpRequestEntity) {
-        val db = this.writableDatabase
-        val contentValues = entity.toContentValues()
-        val rowId = db.insert(TABLE_NAME, null, contentValues)
-        if (rowId < 0) {
-            XposedBridge.log("Insert row failed: $entity")
-        } else {
-            val type = entity.contentType ?: ""
-            XposedBridge.log("Insert a new row ($type): ${entity.url}")
+    fun addToCache(entity: HttpRequestEntity) {
+        if (!cache.add(entity)) {
+            XposedBridge.log("Add to cache failed: $entity")
         }
     }
+
+    fun insert(entity: HttpRequestEntity) {
+        MiscTaskScheduler.handler.post(InsertEntityRunnable(entity))
+    }
+
+    fun insertAllCached() {
+        val task = InsertEntityRunnable(*cache.toTypedArray(), isCached = true)
+        MiscTaskScheduler.handler.post(task)
+        clearCache()
+    }
+
+    fun clearCache() {
+        cache.clear()
+    }
+
+    private inner class InsertEntityRunnable(
+        private vararg val entities: HttpRequestEntity,
+        private val isCached: Boolean = false
+    ) : Runnable {
+        override fun run() {
+            for (entity in entities) {
+                val db = this@DatabaseHelper.writableDatabase
+                val contentValues = entity.toContentValues()
+                val rowId = db.insert(TABLE_NAME, null, contentValues)
+                if (rowId < 0) {
+                    XposedBridge.log("Insert row failed: $entity")
+                } else {
+                    val type = entity.contentType ?: ""
+                    val cachedDesc = if (isCached) "cached" else "new"
+                    XposedBridge.log("Insert a $cachedDesc row ($type): ${entity.url}")
+                }
+            }
+        }
+    }
+
+    companion object {
+        private const val DB_NAME = "net_request.db"
+        private const val TABLE_NAME = "requests"
+        private const val DB_VERSION = 3
+
+        private val databaseManager = ConcurrentHashMap<String, DatabaseHelper>()
+
+        fun get(context: Context): DatabaseHelper {
+            val key = context.packageName
+            val helper = databaseManager[key]
+                ?: synchronized(this) {
+                    val newInstance = DatabaseHelper(context)
+                    databaseManager[key] = newInstance
+                    return newInstance
+                }
+            return helper
+        }
+    }
+
+    data class DatabaseInfo(
+        val filePath: String,
+        val fileSize: Long,
+        val pageSize: Long,
+        val version: Int,
+        val entries: Long,
+        val cache: Int
+    )
 }

@@ -16,6 +16,10 @@ class InstructionReceiver : BroadcastReceiver() {
         @Volatile
         var hookStarted: Boolean = false
             private set
+
+        @Volatile
+        var sticky: Boolean = false
+            private set
     }
 
     fun register(context: Context) {
@@ -41,7 +45,14 @@ class InstructionReceiver : BroadcastReceiver() {
         when (instruction) {
             Instruction.START -> {
                 hookStarted = true
-                XposedBridge.log("hook started")
+                sticky = intent.getBooleanExtra("sticky", false)
+                XposedBridge.log("hook started, sticky=$sticky")
+                val helper = DatabaseHelper.get(context)
+                if (sticky) {
+                    helper.insertAllCached()
+                } else {
+                    helper.clearCache()
+                }
             }
 
             Instruction.STOP -> {
@@ -59,6 +70,7 @@ class InstructionReceiver : BroadcastReceiver() {
                 val helper = DatabaseHelper.get(context)
                 runCatching {
                     helper.deleteAll()
+                    helper.clearCache()
                 }.onSuccess {
                     XposedBridge.log("$helper deleted all")
                 }.onFailure {
@@ -93,7 +105,7 @@ class InstructionReceiver : BroadcastReceiver() {
     inner class OnBroadcastReceiverRunnable(
         private val context: Context,
         private val intent: Intent
-    ): Runnable {
+    ) : Runnable {
         override fun run() {
             onReceive(context, intent)
         }
