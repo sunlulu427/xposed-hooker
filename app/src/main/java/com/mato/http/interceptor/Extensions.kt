@@ -3,6 +3,8 @@ package com.mato.http.interceptor
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Process
+import de.robv.android.xposed.XposedHelpers
+import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
 
 /**
  * @Author: sunlulu.tomato
@@ -22,6 +24,12 @@ fun Context.getCurrentProcessName(): String? {
 fun Context.isCurrentProcessMainProcess(): Boolean {
     val processName = this.getCurrentProcessName()
     return processName != null && processName == this.packageName
+}
+
+fun LoadPackageParam.isOkhttpPresent(): Boolean {
+    return kotlin.runCatching {
+        XposedHelpers.findClass("okhttp3.OkHttpClient", classLoader)
+    }.isSuccess
 }
 
 inline fun <T> Result<T>.onSuccessWhen(condition: Boolean, action: (value: T) -> Unit): Result<T> {

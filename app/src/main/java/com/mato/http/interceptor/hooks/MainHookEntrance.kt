@@ -7,6 +7,7 @@ import com.mato.http.interceptor.BuildConfig
 import com.mato.http.interceptor.DatabaseHelper
 import com.mato.http.interceptor.InstructionReceiver
 import com.mato.http.interceptor.isCurrentProcessMainProcess
+import com.mato.http.interceptor.isOkhttpPresent
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
@@ -29,7 +30,7 @@ class MainHookEntrance : IXposedHookLoadPackage {
      * @throws Throwable Everything the callback throws is caught and logged.
      */
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?) {
-        if (lpparam?.packageName != "com.xingin.xhs") {
+        if (lpparam?.isOkhttpPresent() != true) {
             return
         }
         val instructionReceiver = InstructionReceiver()
