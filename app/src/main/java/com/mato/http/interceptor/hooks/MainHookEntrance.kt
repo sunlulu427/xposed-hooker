@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import com.mato.http.interceptor.BuildConfig
 import com.mato.http.interceptor.InstructionReceiver
+import com.mato.http.interceptor.isCurrentProcessMainProcess
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
@@ -21,6 +22,7 @@ class MainHookEntrance : IXposedHookLoadPackage {
      * This method is called when an app is loaded. It's called very early, even before
      * {@link Application#onCreate} is called.
      * Modules can set up their app-specific hooks here.
+     * Only main process of an app will be hooked. [Context.isCurrentProcessMainProcess]
      *
      * @param lpparam Information about the app.
      * @throws Throwable Everything the callback throws is caught and logged.
@@ -37,6 +39,10 @@ class MainHookEntrance : IXposedHookLoadPackage {
                 override fun afterHookedMethod(param: MethodHookParam?) {
                     super.afterHookedMethod(param)
                     val context = param?.thisObject as? Context ?: return
+                    if (!context.isCurrentProcessMainProcess()) {
+                        XposedBridge.log("$context is not main process, skipped")
+                        return
+                    }
                     XposedBridge.log("@App: $context")
                     XposedBridge.log("@Plugin version: ${BuildConfig.VERSION_NAME}")
                     XposedBridge.log("@OS version: ${Build.VERSION.SDK_INT}")
@@ -58,6 +64,9 @@ class MainHookEntrance : IXposedHookLoadPackage {
                 override fun beforeHookedMethod(param: MethodHookParam?) {
                     super.beforeHookedMethod(param)
                     val context = param?.thisObject as? Context ?: return
+                    if (!context.isCurrentProcessMainProcess()) {
+                        return
+                    }
                     context.unregisterReceiver(instructionReceiver)
                 }
             }
@@ -70,6 +79,9 @@ class MainHookEntrance : IXposedHookLoadPackage {
                 override fun beforeHookedMethod(param: MethodHookParam?) {
                     super.beforeHookedMethod(param)
                     val application = param?.thisObject as? Application ?: return
+                    if (!application.isCurrentProcessMainProcess()) {
+                        return
+                    }
                     XposedBridge.log("$application onLowMemory")
                 }
             }
