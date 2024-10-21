@@ -1,4 +1,6 @@
-import java.time.LocalDateTime
+import com.android.build.gradle.internal.api.ApkVariantOutputImpl
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 plugins {
     id("com.android.application")
@@ -12,9 +14,17 @@ android {
         minSdkVersion(24)
         targetSdkVersion(33)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        val date = LocalDateTime.now()
-        versionName = "${date.month}/${date.dayOfMonth} ${date.hour}:${date.minute}"
+        val formatter = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.ENGLISH)
+        versionName = formatter.format(System.currentTimeMillis())
         buildConfigField("String", "VERSION_NAME", "\"${versionName}\"")
+    }
+    applicationVariants.all {
+        outputs.filterIsInstance<ApkVariantOutputImpl>()
+            .forEach {
+                val variant = buildType.name
+                val apkName = "http_interceptor_${variant}_${versionName}.apk"
+                it.outputFileName = apkName
+            }
     }
     kotlinOptions {
         jvmTarget = "1.8"
