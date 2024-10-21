@@ -23,3 +23,10 @@ fun Context.isCurrentProcessMainProcess(): Boolean {
     val processName = this.getCurrentProcessName()
     return processName != null && processName == this.packageName
 }
+
+inline fun <T> Result<T>.onSuccessWhen(condition: Boolean, action: (value: T) -> Unit): Result<T> {
+    if (condition) {
+        this.onSuccess(action)
+    }
+    return this
+}

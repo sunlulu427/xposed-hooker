@@ -18,7 +18,7 @@ class DatabaseHelper private constructor(
     companion object {
         private const val DB_NAME = "net_request.db"
         private const val TABLE_NAME = "requests"
-        private const val DB_VERSION = 2
+        private const val DB_VERSION = 3
 
         private val databaseManager = ConcurrentHashMap<Context, DatabaseHelper>()
 
@@ -49,6 +49,7 @@ class DatabaseHelper private constructor(
                     date TEXT,
                     ts INTEGER,
                     method TEXT,
+                    content_type TEXT,
                     code INTEGER,
                     length INTEGER,
                     url TEXT,
@@ -94,6 +95,9 @@ class DatabaseHelper private constructor(
         val rowId = db.insert(TABLE_NAME, null, contentValues)
         if (rowId < 0) {
             XposedBridge.log("Insert row failed: $entity")
+        } else {
+            val type = entity.contentType ?: ""
+            XposedBridge.log("Insert a new row ($type): ${entity.url}")
         }
     }
 }

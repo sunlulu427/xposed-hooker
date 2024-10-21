@@ -9,11 +9,12 @@ import java.util.Locale
  * @date: 2024/10/20
  */
 class HttpRequestEntity(
-    private val url: String,
-    private val code: Int,
-    private val method: String,
-    private val response: String,
-    private val ts: Long
+    val url: String,
+    val code: Int,
+    val method: String,
+    val contentType: String?,
+    val response: String,
+    val ts: Long
 ) {
     companion object {
         private val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH)
@@ -27,6 +28,7 @@ class HttpRequestEntity(
         cv.put("url", url)
         cv.put("code", code)
         cv.put("method", method)
+        cv.put("content_type", contentType ?: "")
         cv.put("response", response)
         cv.put("ts", ts)
         cv.put("length", response.length)
