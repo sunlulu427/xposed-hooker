@@ -31,6 +31,11 @@ class InstructionReceiver : BroadcastReceiver() {
             return
         }
         // default thread is main thread
+        if (!MiscTaskScheduler.isCurrentThread()) {
+            MiscTaskScheduler.handler.post(OnBroadcastReceiverRunnable(context, intent))
+            return
+        }
+
         val action = intent.action ?: return
         val instruction = Instruction.of(action) ?: return
         when (instruction) {
@@ -71,6 +76,26 @@ class InstructionReceiver : BroadcastReceiver() {
 
         companion object {
             fun of(action: String): Instruction? = values().firstOrNull { it.action == action }
+        }
+    }
+
+    /**
+     * On broadcast receiver runnable
+     * Lambda expressions generate anonymous classes (generated during compilation),
+     * which sometimes conflicts with Xposed or similar dynamic loading mechanisms,
+     * especially in some multi Dex file and dynamic proxy environments,
+     * which may lead to class validation issues
+     *
+     * @property context The Context in which the receiver is running.
+     * @property intent The Intent being received.
+     * @constructor Create empty On broadcast receiver runnable
+     */
+    inner class OnBroadcastReceiverRunnable(
+        private val context: Context,
+        private val intent: Intent
+    ): Runnable {
+        override fun run() {
+            onReceive(context, intent)
         }
     }
 }
