@@ -42,6 +42,7 @@ class InstructionReceiver : BroadcastReceiver() {
 
         val action = intent.action ?: return
         val instruction = Instruction.of(action) ?: return
+        XposedBridge.log("onReceive: context=$context, intent=$intent")
         when (instruction) {
             Instruction.START -> {
                 hookStarted = true
