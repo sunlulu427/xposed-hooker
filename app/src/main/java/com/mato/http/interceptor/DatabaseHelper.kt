@@ -6,8 +6,8 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import de.robv.android.xposed.XposedBridge
 import java.io.File
-import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * @Author: sunlulu.tomato
@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
 class DatabaseHelper private constructor(
     context: Context
 ) : SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
-    private val cache = Collections.synchronizedList(mutableListOf<HttpRequestEntity>())
+    private val cache = ConcurrentLinkedQueue<HttpRequestEntity>()
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -70,6 +70,9 @@ class DatabaseHelper private constructor(
     fun addToCache(entity: HttpRequestEntity) {
         if (!cache.add(entity)) {
             XposedBridge.log("Add to cache failed: $entity")
+            if (cache.size > MAX_CACHE_SIZE) {
+                cache.poll()
+            }
         }
     }
 
@@ -110,7 +113,8 @@ class DatabaseHelper private constructor(
     companion object {
         private const val DB_NAME = "net_request.db"
         private const val TABLE_NAME = "requests"
-        private const val DB_VERSION = 3
+        private const val DB_VERSION = 5
+        private const val MAX_CACHE_SIZE = 100
 
         private val databaseManager = ConcurrentHashMap<String, DatabaseHelper>()
 
