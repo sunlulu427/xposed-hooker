@@ -1,10 +1,11 @@
-package com.mato.http.interceptor.hooks
+package com.mato.okhttp3.hook
 
 import android.content.Context
-import com.mato.http.interceptor.DatabaseHelper
-import com.mato.http.interceptor.HttpRequestEntity
-import com.mato.http.interceptor.InstructionReceiver
-import com.mato.http.interceptor.beforeMethodHooker
+import com.mato.base.hook.DatabaseHelper
+import com.mato.base.hook.HttpRequestEntity
+import com.mato.base.hook.InstructionReceiver
+import com.mato.base.hook.MyXposedHook
+import com.mato.base.hook.beforeMethodHooker
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage

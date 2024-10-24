@@ -3,16 +3,18 @@ package com.mato.http.interceptor.hooks
 import android.app.Application
 import android.content.Context
 import android.os.Build
+import com.mato.base.hook.DatabaseHelper
+import com.mato.base.hook.InstructionReceiver
+import com.mato.base.hook.MyXposedHook
+import com.mato.base.hook.isCurrentProcessMainProcess
+import com.mato.base.hook.isOkhttpPresent
 import com.mato.http.interceptor.BuildConfig
-import com.mato.http.interceptor.DatabaseHelper
-import com.mato.http.interceptor.InstructionReceiver
-import com.mato.http.interceptor.isCurrentProcessMainProcess
-import com.mato.http.interceptor.isOkhttpPresent
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
 
 /**
  * @Author sunlulu.tomato
@@ -50,11 +52,11 @@ class MainHookEntrance : IXposedHookLoadPackage {
                     XposedBridge.log("@OS version: ${Build.VERSION.SDK_INT}")
 
                     instructionReceiver.register(context)
-                    arrayOf(
-                        ClientBuilderHook(context, lpparam),
-                    ).forEach {
-                        it.handleLoadPackage()
+                    val hooks = mutableListOf<MyXposedHook>()
+                    createOkhttpHooker(context, lpparam)?.let {
+                        hooks.add(it)
                     }
+                    hooks.forEach(MyXposedHook::handleLoadPackage)
                 }
             }
         )
@@ -91,4 +93,23 @@ class MainHookEntrance : IXposedHookLoadPackage {
             }
         )
     }
+
+    private fun createOkhttpHooker(
+        context: Context,
+        lpparam: LoadPackageParam
+    ): MyXposedHook? = kotlin.runCatching {
+        val clientBuilderHook = Class.forName("com.mato.okhttp3.hook.ClientBuilderHook")
+        XposedBridge.log("hooker: $clientBuilderHook")
+        val constructor = clientBuilderHook?.getConstructor(
+            Context::class.java,
+            LoadPackageParam::class.java
+        )
+        XposedBridge.log("constructor: $constructor")
+        constructor?.newInstance(context, lpparam) as? MyXposedHook
+    }
+        .onFailure(XposedBridge::log)
+        .onSuccess {
+            XposedBridge.log("Create $it")
+        }
+        .getOrNull()
 }

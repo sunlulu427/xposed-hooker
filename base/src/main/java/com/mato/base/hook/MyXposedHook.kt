@@ -1,4 +1,4 @@
-package com.mato.http.interceptor.hooks
+package com.mato.base.hook
 
 import android.content.Context
 import de.robv.android.xposed.XposedBridge
@@ -8,7 +8,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
  * @Author: sunlulu.tomato
  * @date: 2024/10/19
  */
-sealed class MyXposedHook(
+abstract class MyXposedHook(
     protected val context: Context,
     protected val lpparam: XC_LoadPackage.LoadPackageParam
 ) {

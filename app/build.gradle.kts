@@ -26,6 +26,14 @@ android {
                 it.outputFileName = apkName
             }
     }
+    buildTypes {
+        getByName("debug") {
+            minifyEnabled(false)
+        }
+        getByName("release") {
+            minifyEnabled(false)
+        }
+    }
     kotlinOptions {
         jvmTarget = "1.8"
     }
@@ -33,10 +41,8 @@ android {
 
 dependencies {
     implementation(fileTree("dir" to "libs", "include" to arrayOf("*.jar")))
-    api(project(":okhttp3"))
-    compileOnly("com.dafruits:webrtc:123.0.0")
+    implementation(project(":base"))
+    implementation(project(":okhttp3"))
     compileOnly("de.robv.android.xposed:api:82")
     compileOnly("de.robv.android.xposed:api:82:sources")
-    compileOnly("com.squareup.okhttp3:okhttp:3.14.9")
-    compileOnly("com.squareup.okhttp3:logging-interceptor:3.14.9")
 }
