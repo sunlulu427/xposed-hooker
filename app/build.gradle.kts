@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    compileSdkVersion(33)
+    compileSdkVersion(34)
     defaultConfig {
         applicationId = "com.mato.http.interceptor"
         minSdkVersion(24)
-        targetSdkVersion(33)
+        targetSdkVersion(34)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val formatter = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.ENGLISH)
         versionName = formatter.format(System.currentTimeMillis())
@@ -33,6 +33,7 @@ android {
 
 dependencies {
     implementation(fileTree("dir" to "libs", "include" to arrayOf("*.jar")))
+    api(project(":okhttp3"))
     compileOnly("com.dafruits:webrtc:123.0.0")
     compileOnly("de.robv.android.xposed:api:82")
     compileOnly("de.robv.android.xposed:api:82:sources")
