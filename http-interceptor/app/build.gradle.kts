@@ -41,8 +41,8 @@ android {
 
 dependencies {
     implementation(fileTree("dir" to "libs", "include" to arrayOf("*.jar")))
-    implementation(project(":base"))
-    implementation(project(":okhttp3"))
+    implementation(project(":http-interceptor:base"))
+    implementation(project(":http-interceptor:okhttp3"))
     compileOnly("de.robv.android.xposed:api:82")
     compileOnly("de.robv.android.xposed:api:82:sources")
 }

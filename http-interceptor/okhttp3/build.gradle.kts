@@ -17,7 +17,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":base"))
+    implementation(project(":http-interceptor:base"))
     compileOnly("de.robv.android.xposed:api:82")
     compileOnly("de.robv.android.xposed:api:82:sources")
     compileOnly("com.squareup.okhttp3:okhttp:3.14.9")
