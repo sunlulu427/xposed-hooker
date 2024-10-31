@@ -1,4 +1,5 @@
 rootProject.name = "xposed-hooker"
+
+include(":common")
+
 include(":http-interceptor:app")
-include(":http-interceptor:base")
-include(":http-interceptor:okhttp3")
